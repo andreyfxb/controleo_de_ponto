@@ -90,4 +90,4 @@ if __name__ == '__main__':
     cadastrar_funcionario('João Silva', 'Analista')
     # registrar_entrada(1)
     # registrar_saida(1)
-    # ver_pontos()
+    ver_pontos()
