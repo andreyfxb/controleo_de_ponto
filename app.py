@@ -141,19 +141,19 @@ if __name__ == '__main__':
 
     while True:
         print("\n--- MENU CONTROLE DE PONTO ---")
-        print("[1] Cadastrar funcionário")
+        print("[1] Cadastrar funcionario")
         print("[2] Registrar entrada")
-        print("[3] Registrar saída")
+        print("[3] Registrar saida")
         print("[4] Ver pontos")
-        print("[5] Listar funcionários")
-        print("[6] Apagar TODOS os dados (funcionários e registros)")
+        print("[5] Listar funcionarios")
+        print("[6] Apagar TODOS os dados (funcionarios e registros)")
         print("[0] Sair")
 
-        opcao = input("Escolha uma opção: ").strip()
+        opcao = input("Escolha uma opcao: ").strip()
 
         if opcao == '1':
-            id_func = input_id("Informe o ID do funcionário (número): ")
-            nome = input("Nome do funcionário: ")
+            id_func = input_id("Informe o ID do funcionario (número): ")
+            nome = input("Nome do funcionario: ")
             cargo = input("Cargo: ")
             cadastrar_funcionario(id_func, nome, cargo)
 
