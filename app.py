@@ -38,6 +38,14 @@ def cadastrar_funcionario(nome, cargo):
     conn.close()
     print(f"Funcionário '{nome}' cadastrado com sucesso!")
 
+def funcionario_existe(funcionario_id):
+    conn = conectar()
+    cursor = conn.cursor()
+    cursor.execute('SELECT id FROM funcionarios WHERE id = ?', (funcionario_id,))
+    resultado = cursor.fetchone()
+    conn.close()
+    return resultado is not None
+
 def registrar_entrada(funcionario_id):
     conn = conectar()
     cursor = conn.cursor()
@@ -69,6 +77,26 @@ def registrar_saida(funcionario_id):
     conn.close()
     print("Saída registrada!")
 
+def ver_pontos():
+    conn = conectar()
+    cursor = conn.cursor()
+    cursor.execute('''
+    SELECT p.id, f.nome, f.cargo, p.data, p.hora_entrada, p.hora_saida
+    FROM ponto p
+    JOIN funcionarios f ON p.funcionario_id = f.id
+    ORDER BY p.data DESC, f.nome
+    ''')
+    registros = cursor.fetchall()
+    conn.close()
+
+    if registros:
+        print("\n--- Registros de ponto ---")
+        for reg in registros:
+            id_ponto, nome, cargo, data, entrada, saida = reg
+            print(f"ID: {id_ponto} | Funcionário: {nome} ({cargo}) | Data: {data} | Entrada: {entrada} | Saída: {saida}")
+    else:
+        print("Nenhum registro encontrado.")
+
 if __name__ == '__main__':
     criar_banco()
     
@@ -88,12 +116,24 @@ if __name__ == '__main__':
             cadastrar_funcionario(nome, cargo)
 
         elif opcao == '2':
-            funcionario_id = int(input("ID do funcionário: "))
-            registrar_entrada(funcionario_id)
+            try:
+                funcionario_id = int(input("ID do funcionário: "))
+                if funcionario_existe(funcionario_id):
+                    registrar_entrada(funcionario_id)
+                else:
+                    print("ID do funcionário não encontrado. Tente novamente.")
+            except ValueError:
+                print("Por favor, digite um número válido para o ID.")
 
         elif opcao == '3':
-            funcionario_id = int(input("ID do funcionário: "))
-            registrar_saida(funcionario_id)
+            try:
+                funcionario_id = int(input("ID do funcionário: "))
+                if funcionario_existe(funcionario_id):
+                    registrar_saida(funcionario_id)
+                else:
+                    print("ID do funcionário não encontrado. Tente novamente.")
+            except ValueError:
+                print("Por favor, digite um número válido para o ID.")
 
         elif opcao == '4':
             ver_pontos()
@@ -104,4 +144,3 @@ if __name__ == '__main__':
 
         else:
             print("Opção inválida. Tente novamente.")
-
