@@ -10,7 +10,7 @@ def criar_banco():
 
     cursor.execute('''
     CREATE TABLE IF NOT EXISTS funcionarios (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id INTEGER PRIMARY KEY,
         nome TEXT NOT NULL,
         cargo TEXT
     )
@@ -30,13 +30,17 @@ def criar_banco():
     conn.commit()
     conn.close()
 
-def cadastrar_funcionario(nome, cargo):
+def cadastrar_funcionario(id_func, nome, cargo):
     conn = conectar()
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO funcionarios (nome, cargo) VALUES (?, ?)", (nome.strip(), cargo.strip()))
-    conn.commit()
-    conn.close()
-    print(f"Funcionário '{nome.strip()}' cadastrado com sucesso!")
+    try:
+        cursor.execute("INSERT INTO funcionarios (id, nome, cargo) VALUES (?, ?, ?)", (id_func, nome.strip(), cargo.strip()))
+        conn.commit()
+        print(f"Funcionário '{nome.strip()}' cadastrado com ID {id_func} com sucesso!")
+    except sqlite3.IntegrityError:
+        print(f"Erro: O ID {id_func} já está cadastrado para outro funcionário.")
+    finally:
+        conn.close()
 
 def registrar_entrada(funcionario_id):
     conn = conectar()
@@ -105,9 +109,9 @@ def listar_funcionarios():
         print("Nenhum funcionário cadastrado.")
     conn.close()
 
-def input_id():
+def input_id(mensagem="ID do funcionário: "):
     while True:
-        id_str = input("ID do funcionário: ").strip()
+        id_str = input(mensagem).strip()
         if id_str.isdigit():
             return int(id_str)
         else:
@@ -128,9 +132,10 @@ if __name__ == '__main__':
         opcao = input("Escolha uma opção: ").strip()
 
         if opcao == '1':
+            id_func = input_id("Informe o ID do funcionário (número): ")
             nome = input("Nome do funcionário: ")
             cargo = input("Cargo: ")
-            cadastrar_funcionario(nome, cargo)
+            cadastrar_funcionario(id_func, nome, cargo)
 
         elif opcao == '2':
             listar_funcionarios()
