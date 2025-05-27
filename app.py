@@ -1,4 +1,5 @@
 import sqlite3
+import csv               # NOVO: para exportar CSV
 from datetime import datetime
 
 # ---------- Conexão e criação do banco ----------
@@ -117,6 +118,33 @@ def ver_pontos():
     else:
         print("Nenhum registro de ponto encontrado.")
 
+# ---------- Exportar para CSV ----------
+def exportar_para_csv():
+    conn = conectar()
+    cursor = conn.cursor()
+    cursor.execute('''
+    SELECT p.id, f.id, f.nome, f.cargo, p.data, p.hora_entrada, p.hora_saida
+    FROM ponto p
+    JOIN funcionarios f ON p.funcionario_id = f.id
+    ORDER BY p.data, p.hora_entrada
+    ''')
+    rows = cursor.fetchall()
+    conn.close()
+
+    if not rows:
+        print("Nenhum registro de ponto para exportar.")
+        return
+
+    with open('registros.csv', 'w', newline='', encoding='utf-8') as arq:
+        writer = csv.writer(arq)
+        writer.writerow([
+            "ID Registro", "ID Func.", "Nome", "Cargo",
+            "Data", "Hora Entrada", "Hora Saída"
+        ])
+        writer.writerows(rows)
+
+    print("Registros exportados para 'registros.csv' com sucesso!")
+
 # ---------- Apagar todos os dados ----------
 def apagar_todos_os_dados():
     conn = conectar()
@@ -147,6 +175,7 @@ if __name__ == '__main__':
         print("[4] Ver pontos")
         print("[5] Listar funcionarios")
         print("[6] Apagar TODOS os dados (funcionarios e registros)")
+        print("[7] Exportar registros para CSV")
         print("[0] Sair")
 
         opcao = input("Escolha uma opcao: ").strip()
@@ -179,6 +208,9 @@ if __name__ == '__main__':
                 apagar_todos_os_dados()
             else:
                 print("Operação cancelada.")
+
+        elif opcao == '7':
+            exportar_para_csv()
 
         elif opcao == '0':
             print("Saindo do sistema.")
