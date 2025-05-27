@@ -87,7 +87,7 @@ def ver_pontos():
 # ======================== TESTE ========================
 if __name__ == '__main__':
     criar_banco()
-    cadastrar_funcionario('João Silva', 'Analista')
+    # cadastrar_funcionario('João Silva', 'Analista')
     # registrar_entrada(1)
-    # registrar_saida(1)
+    registrar_saida(1)
     ver_pontos()
