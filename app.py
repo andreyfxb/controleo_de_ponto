@@ -38,13 +38,19 @@ def cadastrar_funcionario(nome, cargo):
     conn.close()
     print(f"Funcionário '{nome}' cadastrado com sucesso!")
 
-def funcionario_existe(funcionario_id):
+def listar_funcionarios():
     conn = conectar()
     cursor = conn.cursor()
-    cursor.execute('SELECT id FROM funcionarios WHERE id = ?', (funcionario_id,))
-    resultado = cursor.fetchone()
+    cursor.execute("SELECT id, nome, cargo FROM funcionarios")
+    funcionarios = cursor.fetchall()
     conn.close()
-    return resultado is not None
+
+    if funcionarios:
+        print("\n--- Lista de Funcionários ---")
+        for func in funcionarios:
+            print(f"ID: {func[0]} | Nome: {func[1]} | Cargo: {func[2]}")
+    else:
+        print("Nenhum funcionário cadastrado.")
 
 def registrar_entrada(funcionario_id):
     conn = conectar()
@@ -81,21 +87,20 @@ def ver_pontos():
     conn = conectar()
     cursor = conn.cursor()
     cursor.execute('''
-    SELECT p.id, f.nome, f.cargo, p.data, p.hora_entrada, p.hora_saida
+    SELECT p.id, f.nome, p.data, p.hora_entrada, p.hora_saida
     FROM ponto p
     JOIN funcionarios f ON p.funcionario_id = f.id
-    ORDER BY p.data DESC, f.nome
+    ORDER BY p.data DESC, p.hora_entrada DESC
     ''')
     registros = cursor.fetchall()
     conn.close()
 
     if registros:
-        print("\n--- Registros de ponto ---")
+        print("\n--- Registros de Ponto ---")
         for reg in registros:
-            id_ponto, nome, cargo, data, entrada, saida = reg
-            print(f"ID: {id_ponto} | Funcionário: {nome} ({cargo}) | Data: {data} | Entrada: {entrada} | Saída: {saida}")
+            print(f"Registro ID: {reg[0]} | Funcionário: {reg[1]} | Data: {reg[2]} | Entrada: {reg[3]} | Saída: {reg[4]}")
     else:
-        print("Nenhum registro encontrado.")
+        print("Nenhum registro de ponto encontrado.")
 
 if __name__ == '__main__':
     criar_banco()
@@ -106,6 +111,7 @@ if __name__ == '__main__':
         print("[2] Registrar entrada")
         print("[3] Registrar saída")
         print("[4] Ver pontos")
+        print("[5] Listar funcionários")
         print("[0] Sair")
 
         opcao = input("Escolha uma opção: ")
@@ -116,27 +122,18 @@ if __name__ == '__main__':
             cadastrar_funcionario(nome, cargo)
 
         elif opcao == '2':
-            try:
-                funcionario_id = int(input("ID do funcionário: "))
-                if funcionario_existe(funcionario_id):
-                    registrar_entrada(funcionario_id)
-                else:
-                    print("ID do funcionário não encontrado. Tente novamente.")
-            except ValueError:
-                print("Por favor, digite um número válido para o ID.")
+            funcionario_id = int(input("ID do funcionário: "))
+            registrar_entrada(funcionario_id)
 
         elif opcao == '3':
-            try:
-                funcionario_id = int(input("ID do funcionário: "))
-                if funcionario_existe(funcionario_id):
-                    registrar_saida(funcionario_id)
-                else:
-                    print("ID do funcionário não encontrado. Tente novamente.")
-            except ValueError:
-                print("Por favor, digite um número válido para o ID.")
+            funcionario_id = int(input("ID do funcionário: "))
+            registrar_saida(funcionario_id)
 
         elif opcao == '4':
             ver_pontos()
+
+        elif opcao == '5':
+            listar_funcionarios()
 
         elif opcao == '0':
             print("Saindo do sistema.")
