@@ -1,6 +1,7 @@
 import sqlite3
 from datetime import datetime
 
+# ---------- Conexão e criação do banco ----------
 def conectar():
     return sqlite3.connect('ponto.db')
 
@@ -30,11 +31,15 @@ def criar_banco():
     conn.commit()
     conn.close()
 
+# ---------- CRUD de funcionários ----------
 def cadastrar_funcionario(id_func, nome, cargo):
     conn = conectar()
     cursor = conn.cursor()
     try:
-        cursor.execute("INSERT INTO funcionarios (id, nome, cargo) VALUES (?, ?, ?)", (id_func, nome.strip(), cargo.strip()))
+        cursor.execute(
+            "INSERT INTO funcionarios (id, nome, cargo) VALUES (?, ?, ?)",
+            (id_func, nome.strip(), cargo.strip())
+        )
         conn.commit()
         print(f"Funcionário '{nome.strip()}' cadastrado com ID {id_func} com sucesso!")
     except sqlite3.IntegrityError:
@@ -42,17 +47,31 @@ def cadastrar_funcionario(id_func, nome, cargo):
     finally:
         conn.close()
 
+def listar_funcionarios():
+    conn = conectar()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, nome, cargo FROM funcionarios ORDER BY id")
+    funcionarios = cursor.fetchall()
+    conn.close()
+
+    if funcionarios:
+        print("\n--- Lista de Funcionários ---")
+        for f in funcionarios:
+            print(f"ID: {f[0]} | Nome: {f[1]} | Cargo: {f[2]}")
+    else:
+        print("Nenhum funcionário cadastrado.")
+
+# ---------- Registro de ponto ----------
 def registrar_entrada(funcionario_id):
     conn = conectar()
     cursor = conn.cursor()
     data = datetime.now().date().isoformat()
     hora = datetime.now().time().strftime('%H:%M:%S')
 
-    cursor.execute('''
-    INSERT INTO ponto (funcionario_id, data, hora_entrada)
-    VALUES (?, ?, ?)
-    ''', (funcionario_id, data, hora))
-
+    cursor.execute(
+        "INSERT INTO ponto (funcionario_id, data, hora_entrada) VALUES (?, ?, ?)",
+        (funcionario_id, data, hora)
+    )
     conn.commit()
     conn.close()
     print("Entrada registrada!")
@@ -88,35 +107,35 @@ def ver_pontos():
     ''')
 
     registros = cursor.fetchall()
+    conn.close()
+
     if registros:
         print("\n--- Registros de ponto ---")
         for r in registros:
-            print(f"ID: {r[0]} | Funcionário: {r[1]} ({r[2]}) | Data: {r[3]} | Entrada: {r[4]} | Saída: {r[5]}")
+            print(f"ID: {r[0]} | Funcionário: {r[1]} ({r[2]}) | Data: {r[3]} "
+                  f"| Entrada: {r[4]} | Saída: {r[5]}")
     else:
         print("Nenhum registro de ponto encontrado.")
-    conn.close()
 
-def listar_funcionarios():
+# ---------- Apagar todos os dados ----------
+def apagar_todos_os_dados():
     conn = conectar()
     cursor = conn.cursor()
-    cursor.execute("SELECT id, nome, cargo FROM funcionarios ORDER BY id")
-    funcionarios = cursor.fetchall()
-    if funcionarios:
-        print("\n--- Lista de Funcionários ---")
-        for f in funcionarios:
-            print(f"ID: {f[0]} | Nome: {f[1]} | Cargo: {f[2]}")
-    else:
-        print("Nenhum funcionário cadastrado.")
+    cursor.execute("DELETE FROM ponto")
+    cursor.execute("DELETE FROM funcionarios")
+    conn.commit()
     conn.close()
+    print("Todos os cadastros de funcionários e registros de ponto foram apagados!")
 
-def input_id(mensagem="ID do funcionário: "):
+# ---------- Utilidades ----------
+def input_id(msg="ID do funcionário: "):
     while True:
-        id_str = input(mensagem).strip()
+        id_str = input(msg).strip()
         if id_str.isdigit():
             return int(id_str)
-        else:
-            print("Por favor, digite um número válido para o ID.")
+        print("Por favor, digite um número válido para o ID.")
 
+# ---------- Programa principal ----------
 if __name__ == '__main__':
     criar_banco()
 
@@ -127,6 +146,7 @@ if __name__ == '__main__':
         print("[3] Registrar saída")
         print("[4] Ver pontos")
         print("[5] Listar funcionários")
+        print("[6] Apagar TODOS os dados (funcionários e registros)")
         print("[0] Sair")
 
         opcao = input("Escolha uma opção: ").strip()
@@ -152,6 +172,13 @@ if __name__ == '__main__':
 
         elif opcao == '5':
             listar_funcionarios()
+
+        elif opcao == '6':
+            confirm = input("Tem certeza que deseja apagar TODOS os dados? (s/n): ").strip().lower()
+            if confirm == 's':
+                apagar_todos_os_dados()
+            else:
+                print("Operação cancelada.")
 
         elif opcao == '0':
             print("Saindo do sistema.")
