@@ -69,25 +69,39 @@ def registrar_saida(funcionario_id):
     conn.close()
     print("Saída registrada!")
 
-def ver_pontos():
-    conn = conectar()
-    cursor = conn.cursor()
-    cursor.execute('''
-    SELECT f.nome, p.data, p.hora_entrada, p.hora_saida
-    FROM ponto p
-    JOIN funcionarios f ON f.id = p.funcionario_id
-    ORDER BY p.data DESC
-    ''')
-    resultados = cursor.fetchall()
-    conn.close()
-
-    for r in resultados:
-        print(f"Funcionário: {r[0]} | Data: {r[1]} | Entrada: {r[2]} | Saída: {r[3]}")
-
-# ======================== TESTE ========================
 if __name__ == '__main__':
     criar_banco()
-    # cadastrar_funcionario('João Silva', 'Analista')
-    # registrar_entrada(1)
-    registrar_saida(1)
-    ver_pontos()
+    
+    while True:
+        print("\n--- MENU CONTROLE DE PONTO ---")
+        print("[1] Cadastrar funcionário")
+        print("[2] Registrar entrada")
+        print("[3] Registrar saída")
+        print("[4] Ver pontos")
+        print("[0] Sair")
+
+        opcao = input("Escolha uma opção: ")
+
+        if opcao == '1':
+            nome = input("Nome do funcionário: ")
+            cargo = input("Cargo: ")
+            cadastrar_funcionario(nome, cargo)
+
+        elif opcao == '2':
+            funcionario_id = int(input("ID do funcionário: "))
+            registrar_entrada(funcionario_id)
+
+        elif opcao == '3':
+            funcionario_id = int(input("ID do funcionário: "))
+            registrar_saida(funcionario_id)
+
+        elif opcao == '4':
+            ver_pontos()
+
+        elif opcao == '0':
+            print("Saindo do sistema.")
+            break
+
+        else:
+            print("Opção inválida. Tente novamente.")
+
