@@ -1,11 +1,12 @@
 import sqlite3
-import os, sys, subprocess
-from datetime import datetime
+import os, sys, subprocess, datetime
+from datetime import datetime as dt
 
 try:
     import xlsxwriter          # cria planilhas Excel
+    from xlsxwriter.exceptions import FileCreateError
 except ImportError:
-    print("Falta o pacote xlsxwriter → instale com: pip install xlsxwriter")
+    print("Falta xlsxwriter → instale com: pip install xlsxwriter")
     sys.exit(1)
 
 # ---------- conexão ----------
@@ -32,8 +33,7 @@ def criar_banco():
         FOREIGN KEY (funcionario_id) REFERENCES funcionarios(id)
       )
     ''')
-    conn.commit()
-    conn.close()
+    conn.commit(); conn.close()
 
 # ---------- CRUD funcionário ----------
 def cadastrar_funcionario(idf, nome, cargo):
@@ -62,8 +62,8 @@ def listar_funcionarios():
 # ---------- ponto ----------
 def registrar_entrada(fid):
     conn = conectar(); cur = conn.cursor()
-    data = datetime.now().date().isoformat()
-    hora = datetime.now().time().strftime('%H:%M:%S')
+    data = dt.now().date().isoformat()
+    hora = dt.now().time().strftime('%H:%M:%S')
     cur.execute("INSERT INTO ponto (funcionario_id,data,hora_entrada) VALUES (?,?,?)",
                 (fid, data, hora))
     conn.commit(); conn.close()
@@ -71,8 +71,8 @@ def registrar_entrada(fid):
 
 def registrar_saida(fid):
     conn = conectar(); cur = conn.cursor()
-    data = datetime.now().date().isoformat()
-    hora = datetime.now().time().strftime('%H:%M:%S')
+    data = dt.now().date().isoformat()
+    hora = dt.now().time().strftime('%H:%M:%S')
     cur.execute("""UPDATE ponto
                    SET hora_saida = ?
                    WHERE funcionario_id=? AND data=? AND hora_saida IS NULL""",
@@ -80,7 +80,7 @@ def registrar_saida(fid):
     if cur.rowcount:
         print("Saída registrada!")
     else:
-        print("Nenhuma entrada de hoje pendente para esse funcionário.")
+        print("Nenhuma entrada pendente para hoje.")
     conn.commit(); conn.close()
 
 def ver_pontos():
@@ -98,41 +98,95 @@ def ver_pontos():
 
 # ---------- exportar para Excel ----------
 def exportar_para_excel():
-    conn = conectar(); cur = conn.cursor()
-    cur.execute('''SELECT p.id,f.id,f.nome,f.cargo,p.data,
-                          p.hora_entrada,p.hora_saida
-                   FROM ponto p JOIN funcionarios f ON f.id=p.funcionario_id
-                   ORDER BY p.data,p.hora_entrada''')
-    dados = cur.fetchall(); conn.close()
+    conn = conectar()
+    cur = conn.cursor()
+    cur.execute('''
+        SELECT p.id, f.id, f.nome, f.cargo,
+               p.data, p.hora_entrada, p.hora_saida
+        FROM ponto p JOIN funcionarios f ON f.id = p.funcionario_id
+        ORDER BY p.data, p.hora_entrada
+    ''')
+    dados = cur.fetchall()
+    conn.close()
 
     if not dados:
         print("Não há registros para exportar.")
         return
 
-    arquivo = 'registros.xlsx'
-    wb = xlsxwriter.Workbook(arquivo)
-    ws = wb.add_worksheet('Pontos')
+    arq = "registros.xlsx"
+    from xlsxwriter.exceptions import FileCreateError
+    import datetime
 
-    cabe = ["ID Registro", "ID Func", "Nome", "Cargo",
-            "Data", "Hora Entrada", "Hora Saída"]
-    for col, val in enumerate(cabe):
-        ws.write(0, col, val)
+    while True:
+        try:
+            wb = xlsxwriter.Workbook(arq)
+            ws = wb.add_worksheet("Pontos")
 
-    for lin, row in enumerate(dados, start=1):
-        for col, val in enumerate(row):
-            ws.write(lin, col, val)
+            # formatos
+            cab_f = wb.add_format({'bold': True, 'bg_color': '#C6E0B4'})
+            date_f = wb.add_format({'num_format': 'dd/mm/yyyy'})
+            dia_f = wb.add_format({'num_format': 'ddd'})  # dia da semana
+            hora_f = wb.add_format({'num_format': 'hh:mm:ss'})
+            horas_f = wb.add_format({'num_format': '[hh]:mm:ss'})
 
-    wb.close()
-    print(f"Planilha '{arquivo}' criada.")
+            cab = ["ID Reg.", "ID Func.", "Nome", "Cargo",
+                   "Data", "Dia", "Entrada", "Saída", "Horas"]
 
-    # abrir automaticamente
-    caminho = os.path.abspath(arquivo)
-    if os.name == 'nt':                     # Windows
-        os.startfile(caminho)
-    elif sys.platform == 'darwin':          # macOS
-        subprocess.call(['open', caminho])
-    else:                                   # Linux
-        subprocess.call(['xdg-open', caminho])
+            for col, txt in enumerate(cab):
+                ws.write(0, col, txt, cab_f)
+
+            for lin, row in enumerate(dados, 1):
+                (idr, idf, nome, cargo, data_s, ent_s, sai_s) = row
+
+                # Data em Excel
+                data_dt = datetime.datetime.strptime(data_s, "%Y-%m-%d")
+                ws.write_datetime(lin, 4, data_dt, date_f)   # Data
+                ws.write_datetime(lin, 5, data_dt, dia_f)    # Dia da semana
+
+                # Entrada e saída como hora real
+                ent_dt = datetime.datetime.strptime(ent_s, "%H:%M:%S")
+                ws.write_datetime(lin, 6, ent_dt, hora_f)
+
+                if sai_s:
+                    sai_dt = datetime.datetime.strptime(sai_s, "%H:%M:%S")
+                    ws.write_datetime(lin, 7, sai_dt, hora_f)
+                    # fórmula horas trabalhadas: Saída - Entrada
+                    ws.write_formula(lin, 8, f"=IF(G{lin+1}=\"\", \"\", H{lin+1}-G{lin+1})", horas_f)
+                else:
+                    ws.write_blank(lin, 7, None, hora_f)
+                    ws.write_blank(lin, 8, None, horas_f)
+
+                # Colunas textuais
+                ws.write(lin, 0, idr)
+                ws.write(lin, 1, idf)
+                ws.write(lin, 2, nome)
+                ws.write(lin, 3, cargo)
+
+            # Ajustes visuais
+            ws.autofilter(0, 0, lin, len(cab) - 1)
+            ws.set_column(0, 3, 14)   # ID e nome
+            ws.set_column(4, 8, 12)   # datas e horas
+
+            wb.close()
+            print(f"Planilha '{arq}' criada.")
+            break
+        except FileCreateError:
+            ts = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            arq = f"registros_{ts}.xlsx"
+            print(f"Arquivo aberto; salvando como '{arq}'...")
+
+    # Abre automaticamente o arquivo
+    caminho = os.path.abspath(arq)
+    try:
+        if os.name == 'nt':
+            os.startfile(caminho)
+        elif sys.platform == 'darwin':
+            subprocess.call(['open', caminho])
+        else:
+            subprocess.call(['xdg-open', caminho])
+    except Exception:
+        pass
+ # ignora se não conseguir abrir automaticamente
 
 # ---------- util ----------
 def input_id(txt="ID: "):
